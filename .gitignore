@@ -1,0 +1,17 @@
+# Virtualenv
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data/logs
+*.out
+*:\Zone.Identifier
+data/user_stats.json
+
