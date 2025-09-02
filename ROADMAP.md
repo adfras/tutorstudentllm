@@ -7,12 +7,13 @@ This roadmap organizes work into phases to reach a robust, multi‑domain, close
 - [x] Closed‑book anonymization of stems/options/context
 - [x] Self‑verify dial (two answers + agreement)
 - [x] JSONL per‑step logging (presented_stem with CONTEXT)
-- [ ] SAQ task type and evaluator (grade) — In progress
-- [ ] Run IDs + session metadata in logs — In progress
+- [x] SAQ task type and evaluator (grade)
+- [x] Run IDs + session metadata in logs
 
 ## Phase 2 — Evaluation & Analytics
-- [ ] JSONL schema finalized (run metadata, session config, per‑step)
-- [ ] Analysis scripts: learning curves, ablation of context placement/self‑verify
+- [x] JSONL schema with run header and per‑step `ts`
+- [x] Analysis script: learning curves (instant/cumulative), multi‑run aggregator
+- [~] Ablations: grouped by dials (context position, verify, etc.)
 - [ ] Error‑driven learning dials: spacing, rare‑example emphasis
 
 ## Phase 3 — Learner Extensions

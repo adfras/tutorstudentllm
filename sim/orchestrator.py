@@ -100,6 +100,7 @@ class Orchestrator:
             log_f.flush()
         skill_id = cfg.skill_id or next(iter(self.smap["skills"].keys()))
         notes_buf = notes_text or ""
+        import time
         for step in range(cfg.num_steps):
             if (cfg.task or "mcq") == "saq":
                 task = self._make_saq_task(skill_id, cfg, codebook)
@@ -145,6 +146,7 @@ class Orchestrator:
             rec = {
                 "run_id": run_id,
                 "step": step,
+                "ts": int(time.time()),
                 "task": (
                     {"type": "saq", "stem": task.stem, "expected_points": task.expected_points}
                     if is_saq else
