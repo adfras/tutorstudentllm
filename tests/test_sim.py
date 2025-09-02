@@ -1,4 +1,5 @@
 from sim.orchestrator import Orchestrator, RunConfig, Dials
+from sim.domain import DomainStore
 from sim.learner import LLMStudent, AlgoStudent, StatefulLLMStudent
 
 
@@ -66,3 +67,20 @@ def test_tools_usage_in_presented_stem(sample_notes):
     rec = logs[0]
     assert "presented_stem" in rec and ("TOOLS:" in rec["presented_stem"] or rec.get("tool_outputs"))
     assert rec.get("tools_used") is None or "retriever" in rec.get("tools_used", [])
+
+
+def test_domain_store_and_examples():
+    ds = DomainStore()
+    terms = ds.glossary_terms("psych")
+    assert isinstance(terms, list) and len(terms) >= 1
+    ex = ds.mcq_examples("psych", "cog-learning-theories")
+    assert isinstance(ex, list)
+
+
+def test_header_has_anonymization_info(tmp_path, sample_notes):
+    orch = Orchestrator()
+    cfg = RunConfig(num_steps=1, dials=Dials(closed_book=True, anonymize=True))
+    log_path = tmp_path / "run.jsonl"
+    logs = orch.run(LLMStudent(), cfg, notes_text=sample_notes, log_path=str(log_path))
+    header = (log_path.read_text(encoding="utf-8").splitlines())[0]
+    assert '"anonymization"' in header and '"seed"' in header

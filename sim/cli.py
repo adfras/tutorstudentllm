@@ -13,7 +13,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--steps", type=int, default=5)
     p.add_argument("--options", type=int, default=5)
     p.add_argument("--difficulty", default="medium", choices=["easy","medium","hard"])
-    p.add_argument("--task", default="mcq", choices=["mcq","saq"], help="task type to run")
+    p.add_argument("--task", default="mcq", choices=["mcq","saq","code","proof","table_qa"], help="task type to run")
     p.add_argument("--closed-book", action="store_true")
     p.add_argument("--no-anon", action="store_true", help="disable anonymization")
     p.add_argument("--rich", action="store_true")
@@ -25,6 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--log", dest="log_path", default=None, help="path to JSONL log file")
     p.add_argument("--use-tools", action="store_true")
     p.add_argument("--tools", default="retriever", help="comma-separated tool names")
+    p.add_argument("--domain", default="psych")
+    p.add_argument("--use-examples", action="store_true")
     args = p.parse_args(argv)
 
     dials = Dials(
@@ -37,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         use_tools=args.use_tools,
         tools=[t.strip() for t in (args.tools or "").split(",") if t.strip()],
     )
-    cfg = RunConfig(skill_id=args.skill_id, task=args.task, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials)
+    cfg = RunConfig(skill_id=args.skill_id, task=args.task, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials, domain=args.domain)
     orch = Orchestrator()
     if args.student == "llm":
         learner = LLMStudent()

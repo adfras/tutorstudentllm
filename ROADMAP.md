@@ -29,8 +29,10 @@ This roadmap organizes work into phases to reach a robust, multi‑domain, close
 - [x] Table QA (CSV input + exact-match evaluator)
 
 ## Phase 5 — Domain Module
-- [ ] Content stores per domain + de‑anonymization audit path
-- [ ] Domain‑specific anonymization + example scheduling
+- [x] Content stores per domain (glossary, examples)
+- [x] Domain‑specific anonymization (glossary merged into vocab)
+- [x] Per‑run anonymization seed logged for audit
+- [x] Example scheduling (inject rotating EXAMPLE block for MCQ)
 
 ## Phase 6 — Experiment Protocols
 - [ ] Reproducible configs for domain/task mixes

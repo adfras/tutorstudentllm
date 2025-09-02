@@ -16,6 +16,7 @@ from sim.tasks import (
 from sim.evaluators import evaluate_code_python, evaluate_proof_step, evaluate_table_qa
 from sim.anonymize import build_vocab, compile_codebook, anonymize_mcq, anonymize_text
 from sim.tools import build_tools
+from sim.domain import DomainStore, invert_codebook
 
 
 @dataclass
@@ -41,12 +42,14 @@ class RunConfig:
     num_options: int = 5
     difficulty: str = "medium"
     dials: Dials = field(default_factory=Dials)
+    domain: str = "psych"
 
 
 class Orchestrator:
     def __init__(self, model: Optional[OpenAILLM] = None):
         self.llm = model or OpenAILLM()
         self.smap = load_skill_map()
+        self.domain = DomainStore()
         self.vocab = build_vocab(self.smap)
 
     def _make_mcq_task(self, skill_id: str, cfg: RunConfig, codebook: Optional[Dict[str, str]] = None) -> MCQTask:
@@ -109,7 +112,16 @@ class Orchestrator:
 
     def run(self, learner, cfg: RunConfig, notes_text: str = "", log_path: Optional[str] = None) -> List[Dict[str, Any]]:
         # Per-run anonymization keys
-        codebook = compile_codebook(self.vocab, seed=12345) if cfg.dials.anonymize else None
+        # Build domain-aware vocab and codebook
+        vocab = list(self.vocab)
+        try:
+            vocab += self.domain.glossary_terms(cfg.domain)
+        except Exception:
+            pass
+        # deterministic per-run seed for audit
+        import random
+        seed = random.randrange(1, 2**31 - 1)
+        codebook = compile_codebook(vocab, seed=seed) if cfg.dials.anonymize else None
         logs: List[Dict[str, Any]] = []
         log_f = open(log_path, "a", encoding="utf-8") if log_path else None
         import uuid
@@ -127,8 +139,10 @@ class Orchestrator:
                     "num_steps": cfg.num_steps,
                     "num_options": cfg.num_options,
                     "difficulty": cfg.difficulty,
+                    "domain": cfg.domain,
                     "dials": vars(cfg.dials),
                 },
+                "anonymization": ({"seed": seed, "vocab_size": len(vocab)} if codebook else None),
             }
             log_f.write(json.dumps(header, ensure_ascii=False) + "\n")
             log_f.flush()
@@ -231,6 +245,17 @@ class Orchestrator:
             # record with presented stem for proof of context usage
             stem_text = getattr(task, "stem", "")
             presented_stem = stem_text
+            # Optional domain examples injection
+            if cfg.task == "mcq" and cfg.dials.closed_book:
+                try:
+                    exs = self.domain.mcq_examples(cfg.domain, skill_id)
+                except Exception:
+                    exs = []
+                if exs:
+                    # rotate by step
+                    ex = exs[step % len(exs)]
+                    ex_text = f"EXAMPLE:\nQ: {ex.get('stem')}\nOptions: {', '.join(ex.get('options', []))}\nA: {ex.get('options', [''])[ex.get('correct_index', 0)]}"
+                    presented_stem = (presented_stem + "\n\n" + ex_text).strip()
             if context.get("context_text") and cfg.dials.context_position != "none":
                 if cfg.dials.context_position == "pre":
                     presented_stem = f"CONTEXT:\n{context['context_text']}\n\nQUESTION: {stem_text}"
