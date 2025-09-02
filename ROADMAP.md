@@ -35,8 +35,8 @@ This roadmap organizes work into phases to reach a robust, multi‑domain, close
 - [x] Example scheduling (inject rotating EXAMPLE block for MCQ)
 
 ## Phase 6 — Experiment Protocols
-- [ ] Reproducible configs for domain/task mixes
-- [ ] Summary report generation per run (curves + metrics)
+- [x] Reproducible YAML configs for domain/task mixes (`scripts/experiment.py`)
+- [x] Summary report generation (JSON + Markdown via analyzer)
 
 Notes:
 - Model fixed: `gpt-5-nano-2025-08-07` with JSON outputs.
