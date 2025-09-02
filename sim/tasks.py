@@ -31,3 +31,12 @@ def evaluate_mcq(chosen_index: Optional[int], task: MCQTask) -> Dict[str, Any]:
         "chosen_index": chosen_index,
         "correct_index": task.correct_index,
     }
+
+
+@dataclass
+class SAQTask(Task):
+    type: TaskType = field(default="saq", init=False)  # type: ignore[assignment]
+    stem: str = ""
+    expected_points: List[Dict[str, Any]] = field(default_factory=list)
+    model_answer: str = ""
+    difficulty: str = ""

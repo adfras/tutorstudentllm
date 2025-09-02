@@ -13,15 +13,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--steps", type=int, default=5)
     p.add_argument("--options", type=int, default=5)
     p.add_argument("--difficulty", default="medium", choices=["easy","medium","hard"])
+    p.add_argument("--task", default="mcq", choices=["mcq","saq"], help="task type to run")
     p.add_argument("--closed-book", action="store_true")
     p.add_argument("--no-anon", action="store_true", help="disable anonymization")
     p.add_argument("--rich", action="store_true")
     p.add_argument("--student", default="llm", choices=["llm","algo"])
     p.add_argument("--notes-file", default=None)
+    p.add_argument("--log", dest="log_path", default=None, help="path to JSONL log file")
     args = p.parse_args(argv)
 
     dials = Dials(closed_book=args.closed_book, anonymize=(not args.no_anon), rich=args.rich)
-    cfg = RunConfig(skill_id=args.skill_id, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials)
+    cfg = RunConfig(skill_id=args.skill_id, task=args.task, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials)
     orch = Orchestrator()
     if args.student == "llm":
         learner = LLMStudent()
@@ -34,11 +36,10 @@ def main(argv: list[str] | None = None) -> int:
                 notes = f.read()
         except Exception:
             notes = ""
-    logs = orch.run(learner, cfg, notes_text=notes)
+    logs = orch.run(learner, cfg, notes_text=notes, log_path=args.log_path)
     print(json.dumps({"config": cfg.__dict__, "n": len(logs), "results": logs}, ensure_ascii=False))
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

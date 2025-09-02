@@ -32,3 +32,17 @@ def test_presented_stem_includes_context_when_closed_book(sample_notes, tmp_path
     # file should have one json line
     text = log_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(text) == 1 and "presented_stem" in text[0]
+
+
+def test_saq_flow_mock_llm(tmp_path):
+    # SAQ in mock mode: student answers include expected key; grader returns score
+    import os
+    os.environ["TUTOR_MOCK_LLM"] = "1"
+    orch = Orchestrator()
+    cfg = RunConfig(task="saq", num_steps=1, dials=Dials(closed_book=True, anonymize=True))
+    log_path = tmp_path / "saq.jsonl"
+    logs = orch.run(LLMStudent(), cfg, notes_text="", log_path=str(log_path))
+    assert len(logs) == 1
+    rec = logs[0]
+    assert rec["task"]["type"] == "saq"
+    assert "grading" in rec and "score" in rec["grading"]

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from tutor.skill_map import load_skill_map
 from tutor.llm_openai import OpenAILLM
-from sim.tasks import MCQTask, Task, evaluate_mcq
+from sim.tasks import MCQTask, SAQTask, Task, evaluate_mcq
 from sim.anonymize import build_vocab, compile_codebook, anonymize_mcq, anonymize_text
 
 
@@ -21,6 +21,7 @@ class Dials:
 @dataclass
 class RunConfig:
     skill_id: Optional[str] = None
+    task: str = "mcq"  # mcq|saq
     num_steps: int = 10
     num_options: int = 5
     difficulty: str = "medium"
@@ -52,26 +53,55 @@ class Orchestrator:
         )
         return task
 
+    def _make_saq_task(self, skill_id: str, cfg: RunConfig, codebook: Optional[Dict[str, str]] = None) -> SAQTask:
+        skill = self.smap["skills"].get(skill_id) or next(iter(self.smap["skills"].values()))
+        q = self.llm.generate_saq(skill, difficulty=cfg.difficulty)
+        stem = q.get("stem") or ""
+        if cfg.dials.anonymize and codebook:
+            stem = anonymize_text(stem, codebook)
+        task = SAQTask(
+            id=q.get("question_id") or f"saq-{skill_id}",
+            prompt={"skill_id": skill_id, "difficulty": q.get("difficulty") or cfg.difficulty},
+            stem=stem,
+            expected_points=list(q.get("expected_points") or []),
+            model_answer=q.get("model_answer") or "",
+            difficulty=q.get("difficulty") or cfg.difficulty,
+            metadata={"source": "openai"},
+        )
+        return task
+
     def run(self, learner, cfg: RunConfig, notes_text: str = "", log_path: Optional[str] = None) -> List[Dict[str, Any]]:
         # Per-run anonymization keys
         codebook = compile_codebook(self.vocab, seed=12345) if cfg.dials.anonymize else None
         logs: List[Dict[str, Any]] = []
         log_f = open(log_path, "a", encoding="utf-8") if log_path else None
+        import uuid
+        run_id = str(uuid.uuid4())
         skill_id = cfg.skill_id or next(iter(self.smap["skills"].keys()))
         for step in range(cfg.num_steps):
-            task = self._make_mcq_task(skill_id, cfg, codebook)
+            if (cfg.task or "mcq") == "saq":
+                task = self._make_saq_task(skill_id, cfg, codebook)
+                is_saq = True
+            else:
+                task = self._make_mcq_task(skill_id, cfg, codebook)
+                is_saq = False
             # Prepare context shown to the learner
             ctx_text = notes_text if cfg.dials.closed_book else ""
             if codebook and cfg.dials.anonymize and ctx_text:
                 ctx_text = anonymize_text(ctx_text, codebook)
             context = {"notes_text": notes_text, "context_text": ctx_text} if cfg.dials.closed_book else {}
             # Answer
-            ans = learner.answer_mcq(task, context=context)
-            if cfg.dials.verify:
-                ans2 = learner.answer_mcq(task, context=context)
-                agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
-                ans = {**ans, "verify_second": ans2, "verify_agree": agree}
-            evaluation = evaluate_mcq(ans.get("chosen_index"), task)
+            if is_saq:
+                ans = learner.answer_saq(task, context=context)
+                # SAQ evaluation via llm grader
+                grading = self.llm.grade_saq(task.stem, task.expected_points, task.model_answer, ans.get("student_answer") or "")
+            else:
+                ans = learner.answer_mcq(task, context=context)
+                if cfg.dials.verify:
+                    ans2 = learner.answer_mcq(task, context=context)
+                    agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
+                    ans = {**ans, "verify_second": ans2, "verify_agree": agree}
+                evaluation = evaluate_mcq(ans.get("chosen_index"), task)
             # record with presented stem for proof of context usage
             presented_stem = task.stem
             if context.get("context_text") and cfg.dials.context_position != "none":
@@ -80,16 +110,16 @@ class Orchestrator:
                 elif cfg.dials.context_position == "post":
                     presented_stem = f"QUESTION: {task.stem}\n\nCONTEXT:\n{context['context_text']}"
             rec = {
+                "run_id": run_id,
                 "step": step,
-                "task": {
-                    "type": "mcq",
-                    "stem": task.stem,
-                    "options": task.options,
-                    "correct_index": task.correct_index,
-                },
+                "task": (
+                    {"type": "saq", "stem": task.stem, "expected_points": task.expected_points}
+                    if is_saq else
+                    {"type": "mcq", "stem": task.stem, "options": task.options, "correct_index": task.correct_index}
+                ),
                 "presented_stem": presented_stem,
                 "answer": ans,
-                "evaluation": evaluation,
+                **({"evaluation": evaluation} if not is_saq else {"grading": grading}),
             }
             logs.append(rec)
             if log_f:
