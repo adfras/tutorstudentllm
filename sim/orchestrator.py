@@ -4,7 +4,16 @@ from typing import Any, Dict, List, Optional
 
 from tutor.skill_map import load_skill_map
 from tutor.llm_openai import OpenAILLM
-from sim.tasks import MCQTask, SAQTask, Task, evaluate_mcq
+from sim.tasks import (
+    MCQTask,
+    SAQTask,
+    CodeTask,
+    ProofTask,
+    TableQATask,
+    Task,
+    evaluate_mcq,
+)
+from sim.evaluators import evaluate_code_python, evaluate_proof_step, evaluate_table_qa
 from sim.anonymize import build_vocab, compile_codebook, anonymize_mcq, anonymize_text
 from sim.tools import build_tools
 
@@ -27,7 +36,7 @@ class Dials:
 @dataclass
 class RunConfig:
     skill_id: Optional[str] = None
-    task: str = "mcq"  # mcq|saq
+    task: str = "mcq"  # mcq|saq|code|proof|table_qa
     num_steps: int = 10
     num_options: int = 5
     difficulty: str = "medium"
@@ -76,6 +85,28 @@ class Orchestrator:
         )
         return task
 
+    def _make_code_task(self, cfg: RunConfig) -> CodeTask:
+        starter = "def add(a,b):\n    # TODO: implement\n    return a-b\n"
+        tests = [
+            {"args": [2, 3], "kwargs": {}, "expected": 5},
+            {"args": [-1, 4], "kwargs": {}, "expected": 3},
+        ]
+        return CodeTask(
+            id="code-add-1",
+            prompt={},
+            description="Implement add(a,b)",
+            function_name="add",
+            starter_code=starter,
+            tests=tests,
+        )
+
+    def _make_proof_task(self, cfg: RunConfig) -> ProofTask:
+        return ProofTask(id="proof-comm", prompt={}, statement="Show a+b=b+a", expected_keywords=["commutativity"])
+
+    def _make_table_task(self, cfg: RunConfig) -> TableQATask:
+        csv = "name,score\nann,3\nbob,5\ncid,4\n"
+        return TableQATask(id="table-top", prompt={}, csv=csv, question="Who has the highest score?", expected_answer="bob")
+
     def run(self, learner, cfg: RunConfig, notes_text: str = "", log_path: Optional[str] = None) -> List[Dict[str, Any]]:
         # Per-run anonymization keys
         codebook = compile_codebook(self.vocab, seed=12345) if cfg.dials.anonymize else None
@@ -108,6 +139,15 @@ class Orchestrator:
             if (cfg.task or "mcq") == "saq":
                 task = self._make_saq_task(skill_id, cfg, codebook)
                 is_saq = True
+            elif cfg.task == "code":
+                task = self._make_code_task(cfg)
+                is_saq = False
+            elif cfg.task == "proof":
+                task = self._make_proof_task(cfg)
+                is_saq = False
+            elif cfg.task == "table_qa":
+                task = self._make_table_task(cfg)
+                is_saq = False
             else:
                 task = self._make_mcq_task(skill_id, cfg, codebook)
                 is_saq = False
@@ -154,30 +194,48 @@ class Orchestrator:
                 ans = {"student_answer": (best or saq_drafts[0]).get("answer")}
                 grading = (best or saq_drafts[0])["grading"]
             else:
-                # Self-consistency (majority vote) if enabled
-                votes = []
-                n = max(1, int(cfg.dials.self_consistency_n))
-                for _ in range(n):
-                    v = learner.answer_mcq(task, context=context)
-                    votes.append(v.get("chosen_index"))
-                from collections import Counter
-                final_choice = None
-                if votes:
-                    counts = Counter(votes)
-                    final_choice = counts.most_common(1)[0][0]
-                ans = {"chosen_index": final_choice, "votes": votes}
-                if cfg.dials.verify:
-                    ans2 = learner.answer_mcq(task, context=context)
-                    agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
-                    ans = {**ans, "verify_second": ans2, "verify_agree": agree}
-                evaluation = evaluate_mcq(ans.get("chosen_index"), task)
+                # Self-consistency / evaluation by task type
+                if isinstance(task, MCQTask):
+                    votes = []
+                    n = max(1, int(cfg.dials.self_consistency_n))
+                    for _ in range(n):
+                        v = learner.answer_mcq(task, context=context)
+                        votes.append(v.get("chosen_index"))
+                    from collections import Counter
+                    final_choice = None
+                    if votes:
+                        counts = Counter(votes)
+                        final_choice = counts.most_common(1)[0][0]
+                    ans = {"chosen_index": final_choice, "votes": votes}
+                    if cfg.dials.verify:
+                        ans2 = learner.answer_mcq(task, context=context)
+                        agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
+                        ans = {**ans, "verify_second": ans2, "verify_agree": agree}
+                    evaluation = evaluate_mcq(ans.get("chosen_index"), task)
+                elif isinstance(task, CodeTask):
+                    a = learner.answer_code(task, context=context)
+                    code = a.get("code") or task.starter_code
+                    evaluation = evaluate_code_python(task.function_name, code, task.tests)
+                    ans = {"code": code}
+                elif isinstance(task, ProofTask):
+                    a = learner.answer_proof_step(task, context=context)
+                    evaluation = evaluate_proof_step(a.get("step") or "", task.expected_keywords)
+                    ans = a
+                elif isinstance(task, TableQATask):
+                    a = learner.answer_table_qa(task, context=context)
+                    evaluation = evaluate_table_qa(a.get("answer") or "", task.expected_answer)
+                    ans = a
+                else:
+                    ans = {}
+                    evaluation = {}
             # record with presented stem for proof of context usage
-            presented_stem = task.stem
+            stem_text = getattr(task, "stem", "")
+            presented_stem = stem_text
             if context.get("context_text") and cfg.dials.context_position != "none":
                 if cfg.dials.context_position == "pre":
-                    presented_stem = f"CONTEXT:\n{context['context_text']}\n\nQUESTION: {task.stem}"
+                    presented_stem = f"CONTEXT:\n{context['context_text']}\n\nQUESTION: {stem_text}"
                 elif cfg.dials.context_position == "post":
-                    presented_stem = f"QUESTION: {task.stem}\n\nCONTEXT:\n{context['context_text']}"
+                    presented_stem = f"QUESTION: {stem_text}\n\nCONTEXT:\n{context['context_text']}"
             rec = {
                 "run_id": run_id,
                 "step": step,
@@ -185,7 +243,19 @@ class Orchestrator:
                 "task": (
                     {"type": "saq", "stem": task.stem, "expected_points": task.expected_points}
                     if is_saq else
-                    {"type": "mcq", "stem": task.stem, "options": task.options, "correct_index": task.correct_index}
+                    (
+                        {"type": "mcq", "stem": task.stem, "options": task.options, "correct_index": task.correct_index}
+                        if isinstance(task, MCQTask)
+                        else (
+                            {"type": "code", "function_name": task.function_name, "description": task.description}
+                            if isinstance(task, CodeTask)
+                            else (
+                                {"type": "proof", "statement": task.statement}
+                                if isinstance(task, ProofTask)
+                                else {"type": "table_qa", "question": task.question}
+                            )
+                        )
+                    )
                 ),
                 "presented_stem": presented_stem,
                 "answer": ans,

@@ -24,9 +24,9 @@ This roadmap organizes work into phases to reach a robust, multi‑domain, close
 - [x] Tool use (retriever tool, hooks & logging)
 
 ## Phase 4 — Task Expansion
-- [ ] Code repair tasks (unit test evaluator)
-- [ ] Proof steps (hook to proof checker)
-- [ ] Table QA (table input + evaluator)
+- [x] Code repair tasks (unit test evaluator)
+- [x] Proof steps (keyword-based proof hook)
+- [x] Table QA (CSV input + exact-match evaluator)
 
 ## Phase 5 — Domain Module
 - [ ] Content stores per domain + de‑anonymization audit path
