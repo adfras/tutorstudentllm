@@ -1,0 +1,101 @@
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+from tutor.skill_map import load_skill_map
+from tutor.llm_openai import OpenAILLM
+from sim.tasks import MCQTask, Task, evaluate_mcq
+from sim.anonymize import build_vocab, compile_codebook, anonymize_mcq, anonymize_text
+
+
+@dataclass
+class Dials:
+    closed_book: bool = True
+    anonymize: bool = True
+    rich: bool = False  # rationales, etc.
+    verify: bool = False
+    reflection_every: int = 0  # not implemented yet
+    context_position: str = "pre"  # pre|post|none
+
+
+@dataclass
+class RunConfig:
+    skill_id: Optional[str] = None
+    num_steps: int = 10
+    num_options: int = 5
+    difficulty: str = "medium"
+    dials: Dials = field(default_factory=Dials)
+
+
+class Orchestrator:
+    def __init__(self, model: Optional[OpenAILLM] = None):
+        self.llm = model or OpenAILLM()
+        self.smap = load_skill_map()
+        self.vocab = build_vocab(self.smap)
+
+    def _make_mcq_task(self, skill_id: str, cfg: RunConfig, codebook: Optional[Dict[str, str]] = None) -> MCQTask:
+        skill = self.smap["skills"].get(skill_id) or next(iter(self.smap["skills"].values()))
+        q = self.llm.generate_mcq(skill, difficulty=cfg.difficulty, num_options=cfg.num_options, minimal=not cfg.dials.rich)
+        stem = q.get("stem") or ""
+        options = q.get("options") or []
+        if cfg.dials.anonymize and codebook:
+            stem, options = anonymize_mcq(stem, options, codebook)
+        task = MCQTask(
+            id=q.get("question_id") or f"mcq-{skill_id}",
+            prompt={"skill_id": skill_id, "difficulty": cfg.dials.rich and q.get("difficulty") or cfg.difficulty},
+            stem=stem,
+            options=options,
+            correct_index=int(q.get("correct_index", 0)),
+            rationales=q.get("rationales"),
+            misconception_tags=q.get("misconception_tags"),
+            metadata={"source": "openai", "template_id": q.get("template_id")},
+        )
+        return task
+
+    def run(self, learner, cfg: RunConfig, notes_text: str = "", log_path: Optional[str] = None) -> List[Dict[str, Any]]:
+        # Per-run anonymization keys
+        codebook = compile_codebook(self.vocab, seed=12345) if cfg.dials.anonymize else None
+        logs: List[Dict[str, Any]] = []
+        log_f = open(log_path, "a", encoding="utf-8") if log_path else None
+        skill_id = cfg.skill_id or next(iter(self.smap["skills"].keys()))
+        for step in range(cfg.num_steps):
+            task = self._make_mcq_task(skill_id, cfg, codebook)
+            # Prepare context shown to the learner
+            ctx_text = notes_text if cfg.dials.closed_book else ""
+            if codebook and cfg.dials.anonymize and ctx_text:
+                ctx_text = anonymize_text(ctx_text, codebook)
+            context = {"notes_text": notes_text, "context_text": ctx_text} if cfg.dials.closed_book else {}
+            # Answer
+            ans = learner.answer_mcq(task, context=context)
+            if cfg.dials.verify:
+                ans2 = learner.answer_mcq(task, context=context)
+                agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
+                ans = {**ans, "verify_second": ans2, "verify_agree": agree}
+            evaluation = evaluate_mcq(ans.get("chosen_index"), task)
+            # record with presented stem for proof of context usage
+            presented_stem = task.stem
+            if context.get("context_text") and cfg.dials.context_position != "none":
+                if cfg.dials.context_position == "pre":
+                    presented_stem = f"CONTEXT:\n{context['context_text']}\n\nQUESTION: {task.stem}"
+                elif cfg.dials.context_position == "post":
+                    presented_stem = f"QUESTION: {task.stem}\n\nCONTEXT:\n{context['context_text']}"
+            rec = {
+                "step": step,
+                "task": {
+                    "type": "mcq",
+                    "stem": task.stem,
+                    "options": task.options,
+                    "correct_index": task.correct_index,
+                },
+                "presented_stem": presented_stem,
+                "answer": ans,
+                "evaluation": evaluation,
+            }
+            logs.append(rec)
+            if log_f:
+                import json
+                log_f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                log_f.flush()
+        if log_f:
+            log_f.close()
+        return logs
