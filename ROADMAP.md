@@ -21,7 +21,7 @@ This roadmap organizes work into phases to reach a robust, multi‑domain, close
 - [x] Self‑consistency (N answers → best by grade) — SAQ
 - [x] Stateful learner (scratchpad memory) — `StatefulLLMStudent`
 - [x] Notes accumulation strategies (correct/rationales)
-- [ ] Tool use (extensible hooks for future tasks)
+- [x] Tool use (retriever tool, hooks & logging)
 
 ## Phase 4 — Task Expansion
 - [ ] Code repair tasks (unit test evaluator)

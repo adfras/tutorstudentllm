@@ -6,6 +6,7 @@ from tutor.skill_map import load_skill_map
 from tutor.llm_openai import OpenAILLM
 from sim.tasks import MCQTask, SAQTask, Task, evaluate_mcq
 from sim.anonymize import build_vocab, compile_codebook, anonymize_mcq, anonymize_text
+from sim.tools import build_tools
 
 
 @dataclass
@@ -19,6 +20,8 @@ class Dials:
     self_consistency_n: int = 1  # >1 to enable majority-vote for MCQ
     accumulate_notes: bool = False  # accumulate correct info into notes across steps
     rare_emphasis: bool = False  # placeholder for rare-example emphasis
+    use_tools: bool = False
+    tools: List[str] = field(default_factory=lambda: ["retriever"])  # default toolset
 
 
 @dataclass
@@ -113,6 +116,28 @@ class Orchestrator:
             if codebook and cfg.dials.anonymize and ctx_text:
                 ctx_text = anonymize_text(ctx_text, codebook)
             context = {"notes_text": notes_buf, "context_text": ctx_text} if cfg.dials.closed_book else {}
+            # Optional tools
+            tool_outputs = []
+            if cfg.dials.use_tools:
+                tools = build_tools(cfg.dials.tools or [])
+                # task view for tools
+                task_view = {"stem": task.stem}
+                if not is_saq:
+                    task_view["options"] = task.options
+                for tool in tools:
+                    try:
+                        out = tool.run(task=task_view, context={"notes_text": notes_buf})
+                    except Exception:
+                        out = {"name": getattr(tool, "name", "unknown"), "error": True}
+                    tool_outputs.append(out)
+                # inject tool outputs into context text
+                tool_text_parts = []
+                for out in tool_outputs:
+                    if out.get("name") == "retriever" and out.get("snippets"):
+                        tool_text_parts.append("retriever:\n- " + "\n- ".join(out["snippets"]))
+                if tool_text_parts:
+                    tool_text = "TOOLS:\n" + "\n".join(tool_text_parts)
+                    ctx_text = (ctx_text + "\n\n" + tool_text).strip()
             # Answer
             if is_saq:
                 # SAQ self-consistency: generate N drafts, grade each, keep best
@@ -165,6 +190,7 @@ class Orchestrator:
                 "presented_stem": presented_stem,
                 "answer": ans,
                 **({"evaluation": evaluation} if not is_saq else {"grading": grading, "saq_drafts": saq_drafts}),
+                **({} if not tool_outputs else {"tool_outputs": tool_outputs, "tools_used": [o.get("name") for o in tool_outputs]}),
             }
             logs.append(rec)
             if log_f:

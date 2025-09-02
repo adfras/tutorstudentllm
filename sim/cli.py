@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--student", default="llm", choices=["llm","algo","stateful-llm"])
     p.add_argument("--notes-file", default=None)
     p.add_argument("--log", dest="log_path", default=None, help="path to JSONL log file")
+    p.add_argument("--use-tools", action="store_true")
+    p.add_argument("--tools", default="retriever", help="comma-separated tool names")
     args = p.parse_args(argv)
 
     dials = Dials(
@@ -32,6 +34,8 @@ def main(argv: list[str] | None = None) -> int:
         self_consistency_n=args.self_consistency,
         accumulate_notes=args.accumulate_notes,
         rare_emphasis=args.rare_emphasis,
+        use_tools=args.use_tools,
+        tools=[t.strip() for t in (args.tools or "").split(",") if t.strip()],
     )
     cfg = RunConfig(skill_id=args.skill_id, task=args.task, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials)
     orch = Orchestrator()

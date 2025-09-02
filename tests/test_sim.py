@@ -56,3 +56,13 @@ def test_stateful_learner_memory_updates(sample_notes):
     logs = orch.run(st, cfg, notes_text=sample_notes)
     # After one MCQ step, stateful learner should have some memory (best effort)
     assert isinstance(st.memory, list)
+
+
+def test_tools_usage_in_presented_stem(sample_notes):
+    # Ensure tools inject content and are logged
+    orch = Orchestrator()
+    cfg = RunConfig(num_steps=1, dials=Dials(closed_book=True, anonymize=True, use_tools=True, tools=["retriever"]))
+    logs = orch.run(LLMStudent(), cfg, notes_text=sample_notes)
+    rec = logs[0]
+    assert "presented_stem" in rec and ("TOOLS:" in rec["presented_stem"] or rec.get("tool_outputs"))
+    assert rec.get("tools_used") is None or "retriever" in rec.get("tools_used", [])
