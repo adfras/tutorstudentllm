@@ -16,6 +16,9 @@ class Dials:
     verify: bool = False
     reflection_every: int = 0  # not implemented yet
     context_position: str = "pre"  # pre|post|none
+    self_consistency_n: int = 1  # >1 to enable majority-vote for MCQ
+    accumulate_notes: bool = False  # accumulate correct info into notes across steps
+    rare_emphasis: bool = False  # placeholder for rare-example emphasis
 
 
 @dataclass
@@ -77,7 +80,26 @@ class Orchestrator:
         log_f = open(log_path, "a", encoding="utf-8") if log_path else None
         import uuid
         run_id = str(uuid.uuid4())
+        # Write header line with run metadata
+        if log_f:
+            import json, time
+            header = {
+                "run_header": True,
+                "run_id": run_id,
+                "ts": int(time.time()),
+                "config": {
+                    "skill_id": cfg.skill_id,
+                    "task": cfg.task,
+                    "num_steps": cfg.num_steps,
+                    "num_options": cfg.num_options,
+                    "difficulty": cfg.difficulty,
+                    "dials": vars(cfg.dials),
+                },
+            }
+            log_f.write(json.dumps(header, ensure_ascii=False) + "\n")
+            log_f.flush()
         skill_id = cfg.skill_id or next(iter(self.smap["skills"].keys()))
+        notes_buf = notes_text or ""
         for step in range(cfg.num_steps):
             if (cfg.task or "mcq") == "saq":
                 task = self._make_saq_task(skill_id, cfg, codebook)
@@ -86,17 +108,28 @@ class Orchestrator:
                 task = self._make_mcq_task(skill_id, cfg, codebook)
                 is_saq = False
             # Prepare context shown to the learner
-            ctx_text = notes_text if cfg.dials.closed_book else ""
+            ctx_text = notes_buf if cfg.dials.closed_book else ""
             if codebook and cfg.dials.anonymize and ctx_text:
                 ctx_text = anonymize_text(ctx_text, codebook)
-            context = {"notes_text": notes_text, "context_text": ctx_text} if cfg.dials.closed_book else {}
+            context = {"notes_text": notes_buf, "context_text": ctx_text} if cfg.dials.closed_book else {}
             # Answer
             if is_saq:
                 ans = learner.answer_saq(task, context=context)
                 # SAQ evaluation via llm grader
                 grading = self.llm.grade_saq(task.stem, task.expected_points, task.model_answer, ans.get("student_answer") or "")
             else:
-                ans = learner.answer_mcq(task, context=context)
+                # Self-consistency (majority vote) if enabled
+                votes = []
+                n = max(1, int(cfg.dials.self_consistency_n))
+                for _ in range(n):
+                    v = learner.answer_mcq(task, context=context)
+                    votes.append(v.get("chosen_index"))
+                from collections import Counter
+                final_choice = None
+                if votes:
+                    counts = Counter(votes)
+                    final_choice = counts.most_common(1)[0][0]
+                ans = {"chosen_index": final_choice, "votes": votes}
                 if cfg.dials.verify:
                     ans2 = learner.answer_mcq(task, context=context)
                     agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
@@ -126,6 +159,23 @@ class Orchestrator:
                 import json
                 log_f.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 log_f.flush()
+            # Optional notes accumulation
+            if cfg.dials.accumulate_notes:
+                if not is_saq:
+                    try:
+                        ci = task.correct_index
+                        correct_text = task.options[ci] if 0 <= ci < len(task.options) else ""
+                        notes_buf += f"\nCorrect: {correct_text}"
+                        if getattr(task, "rationales", None) and ci < len(task.rationales):
+                            notes_buf += f"\nWhy: {task.rationales[ci]}"
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        # Append model answer as reference
+                        notes_buf += f"\nModel: {task.model_answer}"
+                    except Exception:
+                        pass
         if log_f:
             log_f.close()
         return logs

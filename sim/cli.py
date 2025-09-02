@@ -17,12 +17,22 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--closed-book", action="store_true")
     p.add_argument("--no-anon", action="store_true", help="disable anonymization")
     p.add_argument("--rich", action="store_true")
+    p.add_argument("--self-consistency", type=int, default=1, help="N votes for MCQ")
+    p.add_argument("--accumulate-notes", action="store_true")
+    p.add_argument("--rare", dest="rare_emphasis", action="store_true")
     p.add_argument("--student", default="llm", choices=["llm","algo"])
     p.add_argument("--notes-file", default=None)
     p.add_argument("--log", dest="log_path", default=None, help="path to JSONL log file")
     args = p.parse_args(argv)
 
-    dials = Dials(closed_book=args.closed_book, anonymize=(not args.no_anon), rich=args.rich)
+    dials = Dials(
+        closed_book=args.closed_book,
+        anonymize=(not args.no_anon),
+        rich=args.rich,
+        self_consistency_n=args.self_consistency,
+        accumulate_notes=args.accumulate_notes,
+        rare_emphasis=args.rare_emphasis,
+    )
     cfg = RunConfig(skill_id=args.skill_id, task=args.task, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials)
     orch = Orchestrator()
     if args.student == "llm":

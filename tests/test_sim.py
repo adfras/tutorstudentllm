@@ -29,9 +29,9 @@ def test_presented_stem_includes_context_when_closed_book(sample_notes, tmp_path
     logs = orch.run(LLMStudent(), cfg, notes_text=sample_notes, log_path=str(log_path))
     rec = logs[0]
     assert "CONTEXT:" in rec["presented_stem"]
-    # file should have one json line
+    # file should have header + one record
     text = log_path.read_text(encoding="utf-8").strip().splitlines()
-    assert len(text) == 1 and "presented_stem" in text[0]
+    assert len(text) == 2 and "presented_stem" in text[1]
 
 
 def test_saq_flow_mock_llm(tmp_path):
