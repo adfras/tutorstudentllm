@@ -22,11 +22,15 @@ class Learner:
 
 
 class LLMStudent(Learner):
-    def __init__(self, provider: str = "openai"):
+    def __init__(self, provider: str = "openai", model: str | None = None):
         self.provider = provider
         if provider == "openai":
             from tutor.llm_openai import OpenAILLM
             self.model = OpenAILLM()
+        elif provider in ("deepinfra", "deepseek"):
+            # DeepSeek via DeepInfra OpenAI-compatible endpoint
+            from tutor.llm_deepinfra import DeepInfraLLM
+            self.model = DeepInfraLLM(model=model)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -36,7 +40,15 @@ class LLMStudent(Learner):
         if context and context.get("context_text"):
             stem = f"CONTEXT:\n{context['context_text']}\n\nQUESTION: {task.stem}"
         ans = self.model.answer_mcq(stem, task.options)
-        return {"chosen_index": ans.get("chosen_index"), "raw": ans}
+        chosen = ans.get("chosen_index")
+        # Robust fallback: accept letter keys or default to 0
+        if chosen is None:
+            letter = (ans.get("letter") or ans.get("choice") or "").strip().upper()
+            if letter in ("A","B","C","D","E","F","G","H"):
+                chosen = ord(letter) - ord('A')
+            else:
+                chosen = 0 if task.options else None
+        return {"chosen_index": chosen, "raw": ans}
 
     def answer_saq(self, task: SAQTask, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         # If mocked, emit an answer that includes a key term to satisfy mock grading
@@ -143,8 +155,8 @@ class AlgoStudent(Learner):
 
 
 class StatefulLLMStudent(LLMStudent):
-    def __init__(self, provider: str = "openai", memory_max_items: int = 20):
-        super().__init__(provider=provider)
+    def __init__(self, provider: str = "openai", model: str | None = None, memory_max_items: int = 20):
+        super().__init__(provider=provider, model=model)
         self.memory: list[str] = []
         self.memory_max_items = memory_max_items
 

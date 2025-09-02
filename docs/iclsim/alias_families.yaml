@@ -1,0 +1,74 @@
+version: 1
+families:
+  - id: classical-conditioning-01
+    domain: psych
+    skill_id: cog-learning-theories
+    concept: classical conditioning
+    alias_a:
+      type: mcq
+      stem: "Which is an example of Zim-7?"
+      options:
+        - "A dog salivates to a bell after training"
+        - "A rat presses a lever for food"
+        - "A toddler imitates a parent"
+        - "A student studies to avoid punishment"
+      correct_index: 0
+      rationale: "Zim-7 refers to pairing a neutral stimulus with an unconditioned stimulus until the neutral elicits a response."
+    alias_b:
+      type: mcq
+      stem: "Concept-92 was first demonstrated with dogs and bells. What does it refer to?"
+      options:
+        - "Learning by association between stimuli"
+        - "Learning via consequences"
+        - "Learning by imitation"
+        - "Insight problem solving"
+      correct_index: 0
+      rationale: "Concept-92 refers to learning an association between two stimuli, as in Pavlov's experiments."
+  - id: operant-conditioning-01
+    domain: psych
+    skill_id: cog-learning-theories
+    concept: operant conditioning
+    alias_a:
+      type: mcq
+      stem: "A subject increases behavior to obtain Zog-3. What is Zog-3?"
+      options:
+        - "A neutral cue paired with food"
+        - "A reinforcing consequence"
+        - "A conditioned response"
+        - "A punishment schedule"
+      correct_index: 1
+      rationale: "Zog-3 stands for reinforcement: a consequence that increases behavior."
+    alias_b:
+      type: mcq
+      stem: "In the lever-press paradigm, Beta-55 increases responding. What is Beta-55?"
+      options:
+        - "Reinforcement"
+        - "Punishment"
+        - "Extinction"
+        - "Habituation"
+      correct_index: 0
+      rationale: "Beta-55 is an alias for reinforcement (operant consequence)."
+  - id: reinforcement-vs-punishment-01
+    domain: psych
+    skill_id: cog-learning-theories
+    concept: reinforcement vs punishment
+    alias_a:
+      type: mcq
+      stem: "Using Vek-12 reduces a behavior. What is Vek-12?"
+      options:
+        - "Reinforcement"
+        - "Punishment"
+        - "Shaping"
+        - "Generalization"
+      correct_index: 1
+      rationale: "Vek-12 is a stand-in for punishment, which reduces behavior."
+    alias_b:
+      type: mcq
+      stem: "Concept-77 increases behavior frequency. What process is Concept-77?"
+      options:
+        - "Reinforcement"
+        - "Punishment"
+        - "Extinction"
+        - "Discrimination"
+      correct_index: 0
+      rationale: "Concept-77 refers to reinforcement."

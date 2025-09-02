@@ -19,6 +19,11 @@ Deliver a minimal, fast, general‑purpose In‑Context Learning (ICL) simulator
 - `pip install -r requirements.txt`
 - Run simulator (mock): `export TUTOR_MOCK_LLM=1; python -m sim.cli --steps 3 --closed-book --rich`
 - Algorithmic baseline: `python -m sim.cli --student algo --steps 5 --closed-book --notes-file data/notes_algo.txt`
+- LLM student (OpenAI tutor + DeepSeek student via DeepInfra):
+  - Ensure `.env` has `DEEPINFRA_API_KEY` and set a model in `DEEPINFRA_MODEL` or pass `--model`.
+  - Example: `python -m sim.cli --student llm --provider deepinfra --model deepseek-ai/DeepSeek-R1 --steps 5 --closed-book`
+ - Live run with open-source student (3-step batch):
+   - `.venv/bin/python -m sim.cli --student llm --provider deepinfra --model openai/gpt-oss-20b --steps 3 --closed-book --rich --self-consistency 3 --log runs/deepseek_live.jsonl`
 
 3) Health Checks
 - Simulator runs and prints JSON with `results[]` records.
@@ -29,10 +34,11 @@ Deliver a minimal, fast, general‑purpose In‑Context Learning (ICL) simulator
 
 Synthetic Student
 - Use `--student llm` (default) or `--student algo` with optional `--notes-file`.
+- For DeepSeek via DeepInfra, use `--provider deepinfra` (or `--provider deepseek`) and set `--model` or `DEEPINFRA_MODEL`.
 
 ## Constraints & Policies
 
-- Model is hard‑locked to `gpt-5-2025-08-07`; do not introduce overrides.
+- Tutor model is hard‑locked to `gpt-5-2025-08-07`. Student provider/model is selectable; defaults remain OpenAI.
 - Use JSON response format and prompts that explicitly include the word “JSON” to comply with model requirements.
 - UI should remain minimal and responsive; prefer short stems/options and minimal payloads.
 - Do not log or persist PII besides username; keep stats aggregate only.
@@ -71,6 +77,14 @@ Adaptivity is lightweight: per‑skill `mastery` (0..1) with 7‑day half‑life
 - [ ] Algo student runs with notes
 - [ ] CONTEXT included in `presented_stem` when closed‑book
 - [ ] JSONL per‑step logging works when `log_path` set
+ - [ ] DeepInfra student emits valid choices (fallback handles letter outputs)
+
+## Longer Live Sessions
+
+- Use multiple 3–5 step batches to fit latency constraints and then aggregate with:
+  - `.venv/bin/python -m scripts.analyze --log runs/batch1.jsonl --log runs/batch2.jsonl`
+- For alias‑swap evidence gating (baseline):
+  - `.venv/bin/python -m scripts.experiment --config docs/iclsim/experiments/alias_live_algo.yaml --out runs/alias_live_algo`
 
 ## Troubleshooting
 

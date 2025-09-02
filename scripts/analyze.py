@@ -53,6 +53,33 @@ def metrics_for_run(run: Dict[str, Any]) -> Dict[str, Any]:
                 "scores": scores,
             }
         })
+    # Alias-swap metrics
+    fam_stats: Dict[str, Dict[str, Any]] = {}
+    for s in steps:
+        alias = s.get("alias") or {}
+        fam = alias.get("family_id")
+        if not fam:
+            continue
+        st = fam_stats.setdefault(fam, {"A": [], "B": [], "B_credited": []})
+        if alias.get("phase") == "A":
+            st["A"].append(1 if (s.get("evaluation", {}).get("correct")) else 0)
+        elif alias.get("phase") == "B":
+            st["B"].append(1 if (s.get("evaluation", {}).get("correct")) else 0)
+            ev = (s.get("alias_evidence") or {})
+            st["B_credited"].append(1 if ev.get("credited") else 0)
+    if fam_stats:
+        alias_out = {}
+        for fam, st in fam_stats.items():
+            acc_a = sum(st["A"]) / max(1, len(st["A"]))
+            acc_b = sum(st["B"]) / max(1, len(st["B"]))
+            credited_b = sum(st["B_credited"]) / max(1, len(st["B_credited"])) if st["B_credited"] else None
+            alias_out[fam] = {
+                "acc_A": acc_a,
+                "acc_B": acc_b,
+                "delta": (acc_a - acc_b),
+                "credited_B": credited_b,
+            }
+        out["alias"] = alias_out
     return out
 
 
@@ -103,6 +130,23 @@ def aggregate_group(runs: List[Dict[str, Any]]) -> Dict[str, Any]:
             "runs": len(saq_runs),
             "score_mean": statistics.mean(means),
         }
+    # Alias aggregation: average per-family delta and credited_B
+    alias_coll: Dict[str, List[Dict[str, Any]]] = {}
+    for r in runs:
+        alias = r.get("metrics", {}).get("alias") or {}
+        for fam, m in alias.items():
+            alias_coll.setdefault(fam, []).append(m)
+    if alias_coll:
+        alias_out = {}
+        for fam, lst in alias_coll.items():
+            deltas = [x.get("delta") for x in lst if x.get("delta") is not None]
+            creds = [x.get("credited_B") for x in lst if x.get("credited_B") is not None]
+            alias_out[fam] = {
+                "runs": len(lst),
+                "delta_mean": (statistics.mean(deltas) if deltas else None),
+                "credited_B_mean": (statistics.mean(creds) if creds else None),
+            }
+        stats["alias"] = alias_out
     return stats
 
 

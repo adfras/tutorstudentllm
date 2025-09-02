@@ -1,0 +1,47 @@
+version: 1
+runs:
+  # Alias families with algorithmic student (should leverage notes and show evidence credits)
+  - name: alias_classical_algo
+    task: alias_swap
+    steps: 20
+    repeats: 3
+    student: algo
+    domain: psych
+    alias_family_id: classical-conditioning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 1
+      use_tools: false
+  - name: alias_operant_algo
+    task: alias_swap
+    steps: 20
+    repeats: 3
+    student: algo
+    domain: psych
+    alias_family_id: operant-conditioning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 1
+      use_tools: false
+  # Alias families with mock LLM (baseline)
+  - name: alias_classical_llm
+    task: alias_swap
+    steps: 10
+    repeats: 2
+    student: llm
+    domain: psych
+    alias_family_id: classical-conditioning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 3
+      use_tools: true
+      tools: [tfidf_retriever]

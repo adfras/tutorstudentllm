@@ -1,0 +1,28 @@
+version: 1
+runs:
+  - name: alias_classical_algo_live
+    task: alias_swap
+    steps: 10
+    student: algo
+    domain: psych
+    alias_family_id: classical-conditioning-01
+    coverage_tau: 0.4
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 1
+      use_tools: false
+  - name: alias_operant_algo_live
+    task: alias_swap
+    steps: 10
+    student: algo
+    domain: psych
+    alias_family_id: operant-conditioning-01
+    coverage_tau: 0.4
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 1
+      use_tools: false

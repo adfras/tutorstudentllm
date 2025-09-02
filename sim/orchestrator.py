@@ -17,6 +17,7 @@ from sim.evaluators import evaluate_code_python, evaluate_proof_step, evaluate_t
 from sim.anonymize import build_vocab, compile_codebook, anonymize_mcq, anonymize_text
 from sim.tools import build_tools
 from sim.domain import DomainStore, invert_codebook
+from sim.alias import load_alias_families
 
 
 @dataclass
@@ -43,6 +44,9 @@ class RunConfig:
     difficulty: str = "medium"
     dials: Dials = field(default_factory=Dials)
     domain: str = "psych"
+    # Alias-swap controls
+    alias_family_id: Optional[str] = None
+    coverage_tau: float = 0.4
 
 
 class Orchestrator:
@@ -148,23 +152,63 @@ class Orchestrator:
             log_f.flush()
         skill_id = cfg.skill_id or next(iter(self.smap["skills"].keys()))
         notes_buf = notes_text or ""
+        # Example usage counts (for rare-emphasis scheduling)
+        example_counts: Dict[int, int] = {}
         import time
+        fam_data = load_alias_families()
         for step in range(cfg.num_steps):
             if (cfg.task or "mcq") == "saq":
                 task = self._make_saq_task(skill_id, cfg, codebook)
                 is_saq = True
+                alias_phase = None
+                family_id = None
+            elif cfg.task == "alias_swap":
+                # Build from alias family content
+                families = fam_data.get("families") or []
+                fam_index = fam_data.get("index") or {}
+                fam = fam_index.get(cfg.alias_family_id) if cfg.alias_family_id else (families[0] if families else None)
+                if fam is None:
+                    raise RuntimeError("No alias families available")
+                family_id = fam.get("id")
+                # pick A then B
+                alias_phase = "A" if step % 2 == 0 else "B"
+                var = fam.get("alias_a") if alias_phase == "A" else fam.get("alias_b")
+                stem = var.get("stem") or ""
+                options = var.get("options") or []
+                correct_index = int(var.get("correct_index", 0))
+                if cfg.dials.anonymize and codebook:
+                    stem, options = anonymize_mcq(stem, options, codebook)
+                task = MCQTask(
+                    id=f"alias-{family_id}-{alias_phase}",
+                    prompt={"family_id": family_id, "alias_phase": alias_phase},
+                    stem=stem,
+                    options=options,
+                    correct_index=correct_index,
+                    rationales=[var.get("rationale","") for _ in options],
+                    misconception_tags=None,
+                    metadata={"source": "alias_family"},
+                )
+                is_saq = False
             elif cfg.task == "code":
                 task = self._make_code_task(cfg)
                 is_saq = False
+                alias_phase = None
+                family_id = None
             elif cfg.task == "proof":
                 task = self._make_proof_task(cfg)
                 is_saq = False
+                alias_phase = None
+                family_id = None
             elif cfg.task == "table_qa":
                 task = self._make_table_task(cfg)
                 is_saq = False
+                alias_phase = None
+                family_id = None
             else:
                 task = self._make_mcq_task(skill_id, cfg, codebook)
                 is_saq = False
+                alias_phase = None
+                family_id = None
             # Prepare context shown to the learner
             ctx_text = notes_buf if cfg.dials.closed_book else ""
             if codebook and cfg.dials.anonymize and ctx_text:
@@ -180,7 +224,9 @@ class Orchestrator:
                     task_view["options"] = task.options
                 for tool in tools:
                     try:
-                        out = tool.run(task=task_view, context={"notes_text": notes_buf})
+                        # Pass anonymized notes to align with anonymized stem/options
+                        tool_notes = anonymize_text(notes_buf, codebook) if (codebook and cfg.dials.anonymize) else notes_buf
+                        out = tool.run(task=task_view, context={"notes_text": tool_notes})
                     except Exception:
                         out = {"name": getattr(tool, "name", "unknown"), "error": True}
                     tool_outputs.append(out)
@@ -188,7 +234,11 @@ class Orchestrator:
                 tool_text_parts = []
                 for out in tool_outputs:
                     if out.get("name") == "retriever" and out.get("snippets"):
-                        tool_text_parts.append("retriever:\n- " + "\n- ".join(out["snippets"]))
+                        snips = out["snippets"]
+                        # Ensure snippets are anonymized as well
+                        if codebook and cfg.dials.anonymize:
+                            snips = [anonymize_text(s, codebook) for s in snips]
+                        tool_text_parts.append("retriever:\n- " + "\n- ".join(snips))
                 if tool_text_parts:
                     tool_text = "TOOLS:\n" + "\n".join(tool_text_parts)
                     ctx_text = (ctx_text + "\n\n" + tool_text).strip()
@@ -226,6 +276,29 @@ class Orchestrator:
                         agree = (ans.get("chosen_index") == ans2.get("chosen_index"))
                         ans = {**ans, "verify_second": ans2, "verify_agree": agree}
                     evaluation = evaluate_mcq(ans.get("chosen_index"), task)
+                    # Evidence-gated credit for alias B
+                    alias_evidence = None
+                    if (cfg.task == "alias_swap") and (alias_phase == "B"):
+                        # Coverage and witness with respect to accumulated notes
+                        import re as _re
+                        def tok(s: str) -> set[str]:
+                            return set([t for t in _re.findall(r"[a-zA-Z0-9]+", (s or "").lower()) if len(t) >= 3])
+                        gold = task.options[task.correct_index] if 0 <= task.correct_index < len(task.options) else ""
+                        if task.rationales and 0 <= task.correct_index < len(task.rationales):
+                            gold += "\n" + (task.rationales[task.correct_index] or "")
+                        gold_t = tok(gold)
+                        notes_t = tok(notes_buf)
+                        coverage = (len(gold_t & notes_t) / max(1, len(gold_t))) if gold_t else 0.0
+                        # Witness pick from options using notes overlap
+                        scores = []
+                        for i, opt in enumerate(task.options):
+                            ot = tok(opt)
+                            scores.append((len(ot & notes_t), i))
+                        scores.sort(reverse=True)
+                        witness_idx = scores[0][1] if scores else None
+                        witness_pass = (witness_idx == task.correct_index)
+                        credited = bool(evaluation.get("correct") and coverage >= float(cfg.coverage_tau) and witness_pass)
+                        alias_evidence = {"coverage": coverage, "witness_pass": witness_pass, "credited": credited}
                 elif isinstance(task, CodeTask):
                     a = learner.answer_code(task, context=context)
                     code = a.get("code") or task.starter_code
@@ -245,22 +318,35 @@ class Orchestrator:
             # record with presented stem for proof of context usage
             stem_text = getattr(task, "stem", "")
             presented_stem = stem_text
-            # Optional domain examples injection
+            # Optional domain examples injection (collect, append later after context positioning)
+            ex_text_optional = None
             if cfg.task == "mcq" and cfg.dials.closed_book:
                 try:
                     exs = self.domain.mcq_examples(cfg.domain, skill_id)
                 except Exception:
                     exs = []
                 if exs:
-                    # rotate by step
-                    ex = exs[step % len(exs)]
+                    # choose example: rare-emphasis (least used) or round-robin
+                    if cfg.dials.rare_emphasis:
+                        # find least used index
+                        idx, _ = min(((i, example_counts.get(i, 0)) for i in range(len(exs))), key=lambda t: (t[1], t[0]))
+                    else:
+                        idx = step % len(exs)
+                    example_counts[idx] = example_counts.get(idx, 0) + 1
+                    ex = exs[idx]
                     ex_text = f"EXAMPLE:\nQ: {ex.get('stem')}\nOptions: {', '.join(ex.get('options', []))}\nA: {ex.get('options', [''])[ex.get('correct_index', 0)]}"
-                    presented_stem = (presented_stem + "\n\n" + ex_text).strip()
+                    # anonymize example text to preserve closed-book constraints
+                    if codebook and cfg.dials.anonymize:
+                        ex_text = anonymize_text(ex_text, codebook)
+                    ex_text_optional = ex_text
             if context.get("context_text") and cfg.dials.context_position != "none":
                 if cfg.dials.context_position == "pre":
                     presented_stem = f"CONTEXT:\n{context['context_text']}\n\nQUESTION: {stem_text}"
                 elif cfg.dials.context_position == "post":
                     presented_stem = f"QUESTION: {stem_text}\n\nCONTEXT:\n{context['context_text']}"
+            # If an example text was prepared, append it now
+            if ex_text_optional:
+                presented_stem = (presented_stem + "\n\n" + ex_text_optional).strip()
             rec = {
                 "run_id": run_id,
                 "step": step,
@@ -286,6 +372,7 @@ class Orchestrator:
                 "answer": ans,
                 **({"evaluation": evaluation} if not is_saq else {"grading": grading, "saq_drafts": saq_drafts}),
                 **({} if not tool_outputs else {"tool_outputs": tool_outputs, "tools_used": [o.get("name") for o in tool_outputs]}),
+                **({} if not family_id else {"alias": {"family_id": family_id, "phase": alias_phase}, **({} if alias_evidence is None else {"alias_evidence": alias_evidence})}),
             }
             logs.append(rec)
             if log_f:

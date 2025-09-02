@@ -1,0 +1,49 @@
+version: 1
+runs:
+  # Alias-swap families with tools and rare-emphasis
+  - name: alias_classical_rare
+    task: alias_swap
+    steps: 4  # A,B,A,B
+    student: llm
+    domain: psych
+    alias_family_id: classical-conditioning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 3
+      use_tools: true
+      tools: [tfidf_retriever]
+      rare_emphasis: true
+  - name: alias_operant_tools
+    task: alias_swap
+    steps: 2  # A,B
+    student: llm
+    domain: psych
+    alias_family_id: operant-conditioning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      use_tools: true
+      tools: [tfidf_retriever]
+  # Baseline MCQ/SAQ for comparison
+  - name: mcq_closed
+    task: mcq
+    steps: 3
+    student: llm
+    domain: psych
+    dials:
+      closed_book: true
+      anonymize: true
+      self_consistency_n: 3
+  - name: saq_closed
+    task: saq
+    steps: 2
+    student: llm
+    domain: psych
+    dials:
+      closed_book: true
+      anonymize: true

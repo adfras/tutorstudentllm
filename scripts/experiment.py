@@ -45,6 +45,11 @@ def run_job(job: Dict[str, Any], out_dir: str) -> List[str]:
         domain=str(job.get("domain", "psych")),
         dials=dials,
     )
+    # alias-swap extras
+    if cfg.task == "alias_swap":
+        cfg.alias_family_id = job.get("alias_family_id")
+        if job.get("coverage_tau") is not None:
+            cfg.coverage_tau = float(job.get("coverage_tau"))
     orch = Orchestrator()
     student = str(job.get("student", "llm"))
     if student == "llm":
@@ -83,7 +88,12 @@ def run_experiment(cfg_path: str, out_dir: str) -> Dict[str, Any]:
     md_path = os.path.join(out_dir, "summary.md")
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(render_markdown_summary(summary))
-    return {"logs": all_logs, "summary_json": summ_path, "summary_md": md_path}
+    # Write a simple HTML too
+    html_path = os.path.join(out_dir, "summary.html")
+    html = "<html><body><pre>" + render_markdown_summary(summary).replace("&", "&amp;").replace("<", "&lt;") + "</pre></body></html>"
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return {"logs": all_logs, "summary_json": summ_path, "summary_md": md_path, "summary_html": html_path}
 
 
 def render_markdown_summary(summary: Dict[str, Any]) -> str:
@@ -121,4 +131,3 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -2,6 +2,7 @@ from __future__ import annotations
 import argparse
 import json
 from typing import Any
+from dataclasses import asdict
 
 from sim.orchestrator import Orchestrator, RunConfig, Dials
 from sim.learner import LLMStudent, AlgoStudent
@@ -20,7 +21,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--self-consistency", type=int, default=1, help="N votes for MCQ")
     p.add_argument("--accumulate-notes", action="store_true")
     p.add_argument("--rare", dest="rare_emphasis", action="store_true")
-    p.add_argument("--student", default="llm", choices=["llm","algo","stateful-llm"])
+    p.add_argument("--student", default="llm", choices=["llm","algo","stateful-llm"], help="student type: llm|algo|stateful-llm")
+    p.add_argument("--provider", default="openai", choices=["openai","deepinfra","deepseek"], help="LLM provider for LLM students")
+    p.add_argument("--model", default=None, help="Model name for provider (e.g., deepseek via DeepInfra)")
     p.add_argument("--notes-file", default=None)
     p.add_argument("--log", dest="log_path", default=None, help="path to JSONL log file")
     p.add_argument("--use-tools", action="store_true")
@@ -42,10 +45,10 @@ def main(argv: list[str] | None = None) -> int:
     cfg = RunConfig(skill_id=args.skill_id, task=args.task, num_steps=args.steps, num_options=args.options, difficulty=args.difficulty, dials=dials, domain=args.domain)
     orch = Orchestrator()
     if args.student == "llm":
-        learner = LLMStudent()
+        learner = LLMStudent(provider=args.provider, model=args.model)
     elif args.student == "stateful-llm":
         from sim.learner import StatefulLLMStudent
-        learner = StatefulLLMStudent()
+        learner = StatefulLLMStudent(provider=args.provider, model=args.model)
     else:
         learner = AlgoStudent()
     notes = ""
@@ -56,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:
             notes = ""
     logs = orch.run(learner, cfg, notes_text=notes, log_path=args.log_path)
-    print(json.dumps({"config": cfg.__dict__, "n": len(logs), "results": logs}, ensure_ascii=False))
+    print(json.dumps({"config": asdict(cfg), "n": len(logs), "results": logs}, ensure_ascii=False))
     return 0
 
 

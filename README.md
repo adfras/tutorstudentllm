@@ -5,7 +5,7 @@ This repository now focuses on a general-purpose ICL simulator: a modular system
 ## Highlights
 
 - Modular orchestration: Tutor ↔ Student, step-by-step simulation.
-- Pluggable learners: LLM student (OpenAI) and algorithmic baseline.
+- Pluggable learners: LLM student (OpenAI) and algorithmic baseline; DeepInfra/DeepSeek student supported.
 - Task abstraction: MCQ now; extendable to SAQ, code, proofs, table QA.
 - Closed‑book + anonymization: force reliance on provided context, not pretraining.
 - Deterministic, mockable tests: no network needed when `TUTOR_MOCK_LLM=1`.
@@ -111,3 +111,19 @@ Tests cover JSON extraction utilities, skill map loading, LLM wrapper (mock), an
 ## Roadmap
 
 See “Roadmap for a General-Purpose In-Context Learning Simulator.docx” for the architecture and experimental protocols guiding this direction.
+4) Run LLM student with DeepSeek (via DeepInfra) as the student
+
+```
+# Requires DEEPINFRA_API_KEY in .env and a model name
+python -m sim.cli --student llm --provider deepinfra --model deepseek-ai/DeepSeek-R1 --steps 5 --closed-book
+```
+
+5) Live run with `openai/gpt-oss-20b` student (DeepInfra)
+
+```
+.venv/bin/python -m sim.cli --student llm --provider deepinfra --model openai/gpt-oss-20b --steps 3 --closed-book --rich --self-consistency 3 --log runs/deepseek_live.jsonl
+```
+
+Tips:
+- For longer sessions in constrained environments, run multiple 3–5 step batches and aggregate with `scripts.analyze`.
+- If OSS models ignore JSON mode, the simulator now retries without `response_format` and parses letter choices.
