@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--self-consistency", type=int, default=1, help="N votes for MCQ")
     p.add_argument("--accumulate-notes", action="store_true")
     p.add_argument("--rare", dest="rare_emphasis", action="store_true")
-    p.add_argument("--student", default="llm", choices=["llm","algo"])
+    p.add_argument("--student", default="llm", choices=["llm","algo","stateful-llm"])
     p.add_argument("--notes-file", default=None)
     p.add_argument("--log", dest="log_path", default=None, help="path to JSONL log file")
     args = p.parse_args(argv)
@@ -37,6 +37,9 @@ def main(argv: list[str] | None = None) -> int:
     orch = Orchestrator()
     if args.student == "llm":
         learner = LLMStudent()
+    elif args.student == "stateful-llm":
+        from sim.learner import StatefulLLMStudent
+        learner = StatefulLLMStudent()
     else:
         learner = AlgoStudent()
     notes = ""

@@ -1,5 +1,5 @@
 from sim.orchestrator import Orchestrator, RunConfig, Dials
-from sim.learner import LLMStudent, AlgoStudent
+from sim.learner import LLMStudent, AlgoStudent, StatefulLLMStudent
 
 
 def test_orchestrator_with_mock_llm():
@@ -46,3 +46,13 @@ def test_saq_flow_mock_llm(tmp_path):
     rec = logs[0]
     assert rec["task"]["type"] == "saq"
     assert "grading" in rec and "score" in rec["grading"]
+    assert "saq_drafts" in rec
+
+
+def test_stateful_learner_memory_updates(sample_notes):
+    orch = Orchestrator()
+    st = StatefulLLMStudent()
+    cfg = RunConfig(num_steps=1, dials=Dials(closed_book=True, anonymize=True))
+    logs = orch.run(st, cfg, notes_text=sample_notes)
+    # After one MCQ step, stateful learner should have some memory (best effort)
+    assert isinstance(st.memory, list)

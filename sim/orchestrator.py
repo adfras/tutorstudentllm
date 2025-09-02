@@ -115,9 +115,19 @@ class Orchestrator:
             context = {"notes_text": notes_buf, "context_text": ctx_text} if cfg.dials.closed_book else {}
             # Answer
             if is_saq:
-                ans = learner.answer_saq(task, context=context)
-                # SAQ evaluation via llm grader
-                grading = self.llm.grade_saq(task.stem, task.expected_points, task.model_answer, ans.get("student_answer") or "")
+                # SAQ self-consistency: generate N drafts, grade each, keep best
+                n = max(1, int(cfg.dials.self_consistency_n))
+                saq_drafts = []
+                best = None
+                for _ in range(n):
+                    a = learner.answer_saq(task, context=context)
+                    g = self.llm.grade_saq(task.stem, task.expected_points, task.model_answer, a.get("student_answer") or "")
+                    item = {"answer": a.get("student_answer"), "grading": g}
+                    saq_drafts.append(item)
+                    if best is None or float(g.get("score") or 0.0) > float(best["grading"].get("score") or 0.0):
+                        best = item
+                ans = {"student_answer": (best or saq_drafts[0]).get("answer")}
+                grading = (best or saq_drafts[0])["grading"]
             else:
                 # Self-consistency (majority vote) if enabled
                 votes = []
@@ -154,7 +164,7 @@ class Orchestrator:
                 ),
                 "presented_stem": presented_stem,
                 "answer": ans,
-                **({"evaluation": evaluation} if not is_saq else {"grading": grading}),
+                **({"evaluation": evaluation} if not is_saq else {"grading": grading, "saq_drafts": saq_drafts}),
             }
             logs.append(rec)
             if log_f:
@@ -178,6 +188,12 @@ class Orchestrator:
                         notes_buf += f"\nModel: {task.model_answer}"
                     except Exception:
                         pass
+            # Optional learner memory update
+            try:
+                if hasattr(learner, "update_memory") and callable(getattr(learner, "update_memory")):
+                    learner.update_memory(task, rec)
+            except Exception:
+                pass
         if log_f:
             log_f.close()
         return logs

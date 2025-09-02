@@ -17,9 +17,11 @@ This roadmap organizes work into phases to reach a robust, multi‑domain, close
 - [ ] Error‑driven learning dials: spacing, rare‑example emphasis
 
 ## Phase 3 — Learner Extensions
-- [ ] Self‑consistency (N answers → majority vote)
-- [ ] Stateful/tool‑using learners (scratchpad, tools)
-- [ ] Notes accumulation strategies across steps (strict closed‑book)
+- [x] Self‑consistency (N answers → majority vote) — MCQ
+- [x] Self‑consistency (N answers → best by grade) — SAQ
+- [x] Stateful learner (scratchpad memory) — `StatefulLLMStudent`
+- [x] Notes accumulation strategies (correct/rationales)
+- [ ] Tool use (extensible hooks for future tasks)
 
 ## Phase 4 — Task Expansion
 - [ ] Code repair tasks (unit test evaluator)
