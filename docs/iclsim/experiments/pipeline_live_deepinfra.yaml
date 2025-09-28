@@ -1,0 +1,87 @@
+version: 1
+runs:
+  # A) Fact-Cards ICL (OSS student), 5 batches × 12 = 60 items
+  - name: factcards_batch
+    task: mcq
+    steps: 12
+    repeats: 5
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    dials:
+      closed_book: true
+      anonymize: true
+      self_consistency_n: 3
+      use_tools: true
+      tools: [tfidf_retriever]
+      use_fact_cards: true
+      require_citations: true
+
+  # B) Stateless LLM (no FactCards, no citations), 60 items
+  - name: stateless_llm
+    task: mcq
+    steps: 60
+    repeats: 1
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    dials:
+      closed_book: true
+      anonymize: true
+      self_consistency_n: 1
+      use_tools: false
+      use_fact_cards: false
+      require_citations: false
+
+  # C) Algorithmic baseline, 60 items
+  - name: algo_baseline
+    task: mcq
+    steps: 60
+    repeats: 1
+    student: algo
+    domain: general
+    dials:
+      closed_book: true
+      anonymize: true
+
+  # D) Alias-swap, FactCards ON (acid test), 3 batches × 16 each for two families
+  - name: alias_signal_fc
+    task: alias_swap
+    steps: 16
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: signal-association-01
+    coverage_tau: 0.4
+    dials:
+      closed_book: true
+      anonymize: true
+      self_consistency_n: 3
+      use_tools: true
+      tools: [tfidf_retriever]
+      use_fact_cards: true
+      require_citations: true
+
+  - name: alias_feedback_fc
+    task: alias_swap
+    steps: 16
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: feedback-learning-01
+    coverage_tau: 0.4
+    dials:
+      closed_book: true
+      anonymize: true
+      self_consistency_n: 3
+      use_tools: true
+      tools: [tfidf_retriever]
+      use_fact_cards: true
+      require_citations: true
+

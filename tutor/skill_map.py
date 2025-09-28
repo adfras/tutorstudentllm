@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 try:
     import yaml  # type: ignore
@@ -8,7 +8,10 @@ except Exception as e:  # pragma: no cover
     yaml = None
 
 
-def load_skill_map(path: str = "docs/rt-psych-tutor/skill_map.psych101.yaml") -> Dict[str, Any]:
+def load_skill_map(path: Optional[str] = None) -> Dict[str, Any]:
+    # Allow override via env var; default to a domain-agnostic skill map
+    default_path = "docs/iclsim/skill_map.general.yaml"
+    path = path or os.getenv("SKILL_MAP_PATH", default_path)
     if yaml is None:
         raise RuntimeError("PyYAML not installed. Please `pip install -r requirements.txt`.")
     if not os.path.exists(path):
@@ -21,4 +24,3 @@ def load_skill_map(path: str = "docs/rt-psych-tutor/skill_map.psych101.yaml") ->
 
 def skill_summary(sk: Dict[str, Any]) -> str:
     return f"{sk['name']} (id={sk['id']}, bloom={sk.get('bloom','')})"
-

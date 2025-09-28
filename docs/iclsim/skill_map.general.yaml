@@ -1,0 +1,13 @@
+version: 1
+name: General Skills
+skills:
+  - id: general-concepts
+    name: Core Concepts
+    bloom: understand
+  - id: pattern-recognition
+    name: Pattern Recognition
+    bloom: apply
+  - id: compare-contrast
+    name: Compare and Contrast
+    bloom: analyze
+

@@ -25,11 +25,18 @@ class MCQTask(Task):
 
 
 def evaluate_mcq(chosen_index: Optional[int], task: MCQTask) -> Dict[str, Any]:
-    correct = (isinstance(chosen_index, int) and 0 <= chosen_index < len(task.options) and chosen_index == task.correct_index)
+    # Accept abstention via chosen_index=None
+    abstained = (chosen_index is None)
+    correct = (
+        isinstance(chosen_index, int)
+        and 0 <= chosen_index < len(task.options)
+        and chosen_index == task.correct_index
+    )
     return {
         "correct": bool(correct),
         "chosen_index": chosen_index,
         "correct_index": task.correct_index,
+        "abstained": bool(abstained),
     }
 
 

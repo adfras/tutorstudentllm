@@ -2,7 +2,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from dataclasses import asdict
 from typing import Any, Dict, List
 
 try:
@@ -11,7 +10,7 @@ except Exception:  # pragma: no cover
     yaml = None
 
 from sim.orchestrator import Orchestrator, RunConfig, Dials
-from sim.learner import LLMStudent, AlgoStudent
+from sim.learner import LLMStudent, AlgoStudent, OracleStudent
 from scripts.analyze import analyze_many
 
 
@@ -35,6 +34,9 @@ def run_job(job: Dict[str, Any], out_dir: str) -> List[str]:
         context_position=str(job.get("dials", {}).get("context_position", "pre")),
         use_tools=bool(job.get("dials", {}).get("use_tools", False)),
         tools=list(job.get("dials", {}).get("tools", ["retriever"])),
+        use_fact_cards=bool(job.get("dials", {}).get("use_fact_cards", False)),
+        fact_cards_budget=int(job.get("dials", {}).get("fact_cards_budget", 6)),
+        require_citations=bool(job.get("dials", {}).get("require_citations", False)),
     )
     cfg = RunConfig(
         skill_id=job.get("skill_id"),
@@ -42,7 +44,7 @@ def run_job(job: Dict[str, Any], out_dir: str) -> List[str]:
         num_steps=int(job.get("steps", 10)),
         num_options=int(job.get("options", 5)),
         difficulty=str(job.get("difficulty", "medium")),
-        domain=str(job.get("domain", "psych")),
+        domain=str(job.get("domain", "general")),
         dials=dials,
     )
     # alias-swap extras
@@ -52,11 +54,15 @@ def run_job(job: Dict[str, Any], out_dir: str) -> List[str]:
             cfg.coverage_tau = float(job.get("coverage_tau"))
     orch = Orchestrator()
     student = str(job.get("student", "llm"))
+    provider = str(job.get("provider", "openai"))
+    model = job.get("model")
     if student == "llm":
-        learner = LLMStudent()
+        learner = LLMStudent(provider=provider, model=model)
     elif student == "stateful-llm":
         from sim.learner import StatefulLLMStudent
-        learner = StatefulLLMStudent()
+        learner = StatefulLLMStudent(provider=provider, model=model)
+    elif student == "oracle":
+        learner = OracleStudent()
     else:
         learner = AlgoStudent()
     notes = ""
@@ -103,6 +109,10 @@ def render_markdown_summary(summary: Dict[str, Any]) -> str:
         mcq = overall["mcq"]
         lines.append(f"- MCQ acc_final_mean: {mcq.get('acc_final_mean'):.3f}")
         lines.append(f"- MCQ acc_auc_mean: {mcq.get('acc_auc_mean'):.3f}")
+        if "credited_final_mean" in mcq:
+            lines.append(f"- MCQ credited_final_mean: {mcq.get('credited_final_mean'):.3f}")
+        if "credited_auc_mean" in mcq:
+            lines.append(f"- MCQ credited_auc_mean: {mcq.get('credited_auc_mean'):.3f}")
     if "saq" in overall:
         saq = overall["saq"]
         lines.append(f"- SAQ score_mean: {saq.get('score_mean'):.3f}")
@@ -113,6 +123,8 @@ def render_markdown_summary(summary: Dict[str, Any]) -> str:
         if "mcq" in v:
             m = v["mcq"]
             lines.append(f"- Runs: {m.get('runs')} | acc_final_mean: {m.get('acc_final_mean'):.3f} | acc_auc_mean: {m.get('acc_auc_mean'):.3f}")
+            if "credited_final_mean" in m:
+                lines.append(f"- credited_final_mean: {m.get('credited_final_mean'):.3f} | credited_auc_mean: {m.get('credited_auc_mean'):.3f}")
         if "saq" in v:
             s = v["saq"]
             lines.append(f"- Runs: {s.get('runs')} | score_mean: {s.get('score_mean'):.3f}")
@@ -125,7 +137,15 @@ def main(argv=None) -> int:
     p.add_argument("--out", required=True, help="output directory for logs and summary")
     args = p.parse_args(argv)
     res = run_experiment(args.config, args.out)
-    print(json.dumps(res, ensure_ascii=False))
+    out = json.dumps(res, ensure_ascii=False)
+    try:
+        print(out)
+    except BrokenPipeError:  # downstream pipe closed (e.g., tee exited)
+        try:
+            import sys
+            sys.stdout.close()
+        except Exception:
+            pass
     return 0
 
 

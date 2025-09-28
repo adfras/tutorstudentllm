@@ -1,0 +1,69 @@
+version: 1
+runs:
+  # Alias-swap with DeepInfra LLM student, notes accumulation ON (evidence should rise over B steps)
+  - name: alias_signal_assoc_llm_notes_on
+    task: alias_swap
+    steps: 16      # A,B alternating → 8 B opportunities
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: signal-association-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 1
+      use_tools: false
+  - name: alias_feedback_llm_notes_on
+    task: alias_swap
+    steps: 16
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: feedback-learning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: true
+      self_consistency_n: 1
+      use_tools: false
+
+  # Control: identical, but notes accumulation OFF (should reduce B credited)
+  - name: alias_signal_assoc_llm_notes_off
+    task: alias_swap
+    steps: 16
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: signal-association-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: false
+      self_consistency_n: 1
+      use_tools: false
+  - name: alias_feedback_llm_notes_off
+    task: alias_swap
+    steps: 16
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: feedback-learning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: false
+      self_consistency_n: 1
+      use_tools: false

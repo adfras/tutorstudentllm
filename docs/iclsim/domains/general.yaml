@@ -1,0 +1,15 @@
+glossary:
+  concept: A general idea or understanding.
+  pattern: A discernible regularity in data.
+  contrast: The state of being strikingly different.
+
+examples:
+  mcq:
+    general-concepts:
+      - stem: Which option best illustrates a concept?
+        options: [An abstract idea, A random number, A misspelling, An unknown]
+        correct_index: 0
+      - stem: What is a concept primarily used for?
+        options: [Understanding, Decoration, Navigation, Cooking]
+        correct_index: 0
+

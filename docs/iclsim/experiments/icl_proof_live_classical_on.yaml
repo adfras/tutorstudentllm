@@ -1,0 +1,22 @@
+version: 1
+runs:
+  - name: alias_classical_fc_sc3_retrieval
+    task: alias_swap
+    steps: 16
+    repeats: 3
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: signal-association-01
+    coverage_tau: 0.35
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: false
+      self_consistency_n: 3
+      use_tools: true
+      tools: [retriever]
+      use_fact_cards: true
+      require_citations: true
+

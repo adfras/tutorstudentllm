@@ -8,7 +8,8 @@ except Exception:  # pragma: no cover
     yaml = None
 
 
-TEMPLATES_PATH = os.path.join("docs", "rt-psych-tutor", "mcq_templates.yaml")
+# Domain-agnostic default; may be overridden by passing a path
+TEMPLATES_PATH = os.path.join("docs", "iclsim", "mcq_templates.yaml")
 
 
 def load_mcq_templates(path: str = TEMPLATES_PATH) -> Dict[str, Any]:
@@ -26,4 +27,3 @@ def templates_for_skill(skill_id: str, templates: Dict[str, Any] | None = None) 
     templates = templates or load_mcq_templates()
     skill_templates = templates.get("skills", {}).get(skill_id, {}).get("templates", []) or []
     return skill_templates
-

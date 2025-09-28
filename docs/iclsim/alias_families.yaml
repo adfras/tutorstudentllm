@@ -1,74 +1,74 @@
 version: 1
 families:
-  - id: classical-conditioning-01
-    domain: psych
-    skill_id: cog-learning-theories
-    concept: classical conditioning
+  - id: signal-association-01
+    domain: general
+    skill_id: general-concepts
+    concept: association between signals
     alias_a:
       type: mcq
-      stem: "Which is an example of Zim-7?"
+      stem: "Which is an example of Zim-28?"
       options:
-        - "A dog salivates to a bell after training"
-        - "A rat presses a lever for food"
-        - "A toddler imitates a parent"
-        - "A student studies to avoid punishment"
+        - "A system triggers Action B after seeing Cue A repeatedly"
+        - "An agent presses a key when rewarded"
+        - "A person copies a design"
+        - "A user avoids Task Z to prevent a penalty"
       correct_index: 0
-      rationale: "Zim-7 refers to pairing a neutral stimulus with an unconditioned stimulus until the neutral elicits a response."
+      rationale: "Zim-28 refers to forming a link between inputs so that one predicts another."
     alias_b:
       type: mcq
-      stem: "Concept-92 was first demonstrated with dogs and bells. What does it refer to?"
+      stem: "Concept-283 refers to what process?"
       options:
-        - "Learning by association between stimuli"
-        - "Learning via consequences"
-        - "Learning by imitation"
-        - "Insight problem solving"
+        - "Change by association between signals/inputs"
+        - "Change via consequences/feedback"
+        - "Change by imitation"
+        - "Unrelated problem solving"
       correct_index: 0
-      rationale: "Concept-92 refers to learning an association between two stimuli, as in Pavlov's experiments."
-  - id: operant-conditioning-01
-    domain: psych
-    skill_id: cog-learning-theories
-    concept: operant conditioning
+      rationale: "Concept-283 denotes learning an association between two inputs."
+  - id: feedback-learning-01
+    domain: general
+    skill_id: general-concepts
+    concept: change via feedback
     alias_a:
       type: mcq
-      stem: "A subject increases behavior to obtain Zog-3. What is Zog-3?"
+      stem: "An agent increases a behavior to obtain Zog-3. What is Zog-3?"
       options:
-        - "A neutral cue paired with food"
-        - "A reinforcing consequence"
-        - "A conditioned response"
-        - "A punishment schedule"
+        - "A neutral cue paired with an outcome"
+        - "Rewarding feedback"
+        - "A conditioned reaction"
+        - "A penalty schedule"
       correct_index: 1
-      rationale: "Zog-3 stands for reinforcement: a consequence that increases behavior."
+      rationale: "Zog-3 stands for rewarding feedback that increases behavior."
     alias_b:
       type: mcq
-      stem: "In the lever-press paradigm, Beta-55 increases responding. What is Beta-55?"
+      stem: "In a button-press task, Beta-55 increases responding. What is Beta-55?"
       options:
-        - "Reinforcement"
-        - "Punishment"
-        - "Extinction"
-        - "Habituation"
+        - "Rewarding feedback"
+        - "Penalizing feedback"
+        - "No-feedback condition"
+        - "Unrelated adaptation"
       correct_index: 0
-      rationale: "Beta-55 is an alias for reinforcement (operant consequence)."
-  - id: reinforcement-vs-punishment-01
-    domain: psych
-    skill_id: cog-learning-theories
-    concept: reinforcement vs punishment
+      rationale: "Beta-55 is an alias for rewarding feedback."
+  - id: increase-vs-decrease-01
+    domain: general
+    skill_id: general-concepts
+    concept: increase vs decrease from feedback
     alias_a:
       type: mcq
       stem: "Using Vek-12 reduces a behavior. What is Vek-12?"
       options:
-        - "Reinforcement"
-        - "Punishment"
-        - "Shaping"
+        - "Rewarding feedback"
+        - "Penalizing feedback"
+        - "Gradual shaping"
         - "Generalization"
       correct_index: 1
-      rationale: "Vek-12 is a stand-in for punishment, which reduces behavior."
+      rationale: "Vek-12 is a stand-in for penalizing feedback that reduces behavior."
     alias_b:
       type: mcq
       stem: "Concept-77 increases behavior frequency. What process is Concept-77?"
       options:
-        - "Reinforcement"
-        - "Punishment"
-        - "Extinction"
-        - "Discrimination"
+        - "Rewarding feedback"
+        - "Penalizing feedback"
+        - "No-feedback condition"
+        - "Signal discrimination"
       correct_index: 0
-      rationale: "Concept-77 refers to reinforcement."
+      rationale: "Concept-77 refers to rewarding feedback."

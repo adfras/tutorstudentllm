@@ -51,6 +51,3 @@ def extract_json(text: str):
     raise ValueError("Failed to parse JSON from text")
 
 
-def dumps(obj) -> str:
-    return json.dumps(obj, ensure_ascii=False, indent=2)
-

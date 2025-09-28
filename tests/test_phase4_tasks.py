@@ -1,7 +1,7 @@
 from sim.tasks import CodeTask, ProofTask, TableQATask
 from sim.evaluators import evaluate_code_python, evaluate_proof_step, evaluate_table_qa
 from sim.orchestrator import Orchestrator, RunConfig, Dials
-from sim.learner import LLMStudent
+from sim.learner import OracleStudent
 
 
 def test_evaluate_code_python_pass():
@@ -28,8 +28,7 @@ def test_orchestrator_code_task_mock_llm():
     # Orchestrator makes a built-in code task; LLMStudent mock returns correct add
     cfg = RunConfig(task="code", num_steps=1)
     orch = Orchestrator()
-    logs = orch.run(LLMStudent(), cfg)
+    logs = orch.run(OracleStudent(), cfg)
     rec = logs[0]
     assert rec["task"]["type"] == "code"
     assert rec["evaluation"]["ok"] and rec["evaluation"]["passed"] == rec["evaluation"]["total"]
-

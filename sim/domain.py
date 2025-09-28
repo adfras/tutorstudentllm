@@ -43,10 +43,4 @@ class DomainStore:
         return list(ex)
 
 
-def invert_codebook(codebook: Dict[str, str]) -> Dict[str, str]:
-    inv: Dict[str, str] = {}
-    for k, v in codebook.items():
-        if v and v not in inv:
-            inv[v] = k
-    return inv
-
+# Note: invert_codebook was unused across the repository and removed to reduce footprint.

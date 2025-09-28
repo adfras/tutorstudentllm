@@ -1,13 +1,13 @@
 version: 1
 runs:
   # Alias families with algorithmic student (should leverage notes and show evidence credits)
-  - name: alias_classical_algo
+  - name: alias_signal_algo
     task: alias_swap
     steps: 20
     repeats: 3
     student: algo
-    domain: psych
-    alias_family_id: classical-conditioning-01
+    domain: general
+    alias_family_id: signal-association-01
     coverage_tau: 0.2
     dials:
       closed_book: true
@@ -15,13 +15,13 @@ runs:
       accumulate_notes: true
       self_consistency_n: 1
       use_tools: false
-  - name: alias_operant_algo
+  - name: alias_feedback_algo
     task: alias_swap
     steps: 20
     repeats: 3
     student: algo
-    domain: psych
-    alias_family_id: operant-conditioning-01
+    domain: general
+    alias_family_id: feedback-learning-01
     coverage_tau: 0.2
     dials:
       closed_book: true
@@ -30,13 +30,13 @@ runs:
       self_consistency_n: 1
       use_tools: false
   # Alias families with mock LLM (baseline)
-  - name: alias_classical_llm
+  - name: alias_signal_llm
     task: alias_swap
     steps: 10
     repeats: 2
     student: llm
-    domain: psych
-    alias_family_id: classical-conditioning-01
+    domain: general
+    alias_family_id: signal-association-01
     coverage_tau: 0.2
     dials:
       closed_book: true

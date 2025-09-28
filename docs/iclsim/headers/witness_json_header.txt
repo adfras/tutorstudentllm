@@ -1,0 +1,18 @@
+WITNESS PROTOCOL (JSON, mandatory)
+
+You MUST include a top-level key named "witness" in your JSON output.
+
+Witness schema:
+{
+  "witness": {
+    "rule":   {"card_id": string, "quote": string},
+    "choice": {"card_id": string, "quote": string}
+  }
+}
+
+Hard constraints (must obey literally):
+- The witness.rule and witness.choice quotes MUST be verbatim substrings (≤ 30 words) from the cited Fact‑Cards.
+- The witness.choice.card_id MUST equal the PRO card id for the chosen option (see option_card_ids mapping) and its quote must come from that card.
+- If you cannot add witness with valid quotes, output exactly choice:"IDK" and keep JSON valid; do not include explanations.
+
+Do not emit any text outside the required JSON object.

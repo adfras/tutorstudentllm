@@ -1,0 +1,18 @@
+version: 1
+runs:
+  - name: alias_feedback_llm_notes_off
+    task: alias_swap
+    steps: 8
+    repeats: 1
+    student: llm
+    provider: deepinfra
+    model: openai/gpt-oss-20b
+    domain: general
+    alias_family_id: feedback-learning-01
+    coverage_tau: 0.2
+    dials:
+      closed_book: true
+      anonymize: true
+      accumulate_notes: false
+      self_consistency_n: 1
+      use_tools: false

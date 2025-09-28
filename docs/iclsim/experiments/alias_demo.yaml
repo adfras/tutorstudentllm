@@ -1,12 +1,12 @@
 version: 1
 runs:
   # Alias-swap families with tools and rare-emphasis
-  - name: alias_classical_rare
+  - name: alias_signal_rare
     task: alias_swap
     steps: 4  # A,B,A,B
     student: llm
-    domain: psych
-    alias_family_id: classical-conditioning-01
+    domain: general
+    alias_family_id: signal-association-01
     coverage_tau: 0.2
     dials:
       closed_book: true
@@ -16,12 +16,12 @@ runs:
       use_tools: true
       tools: [tfidf_retriever]
       rare_emphasis: true
-  - name: alias_operant_tools
+  - name: alias_feedback_tools
     task: alias_swap
     steps: 2  # A,B
     student: llm
-    domain: psych
-    alias_family_id: operant-conditioning-01
+    domain: general
+    alias_family_id: feedback-learning-01
     coverage_tau: 0.2
     dials:
       closed_book: true
@@ -34,7 +34,7 @@ runs:
     task: mcq
     steps: 3
     student: llm
-    domain: psych
+    domain: general
     dials:
       closed_book: true
       anonymize: true
@@ -43,7 +43,7 @@ runs:
     task: saq
     steps: 2
     student: llm
-    domain: psych
+    domain: general
     dials:
       closed_book: true
       anonymize: true

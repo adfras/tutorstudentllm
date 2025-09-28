@@ -20,7 +20,7 @@ def build_codebook_from_header(header: dict) -> Dict[str, str]:
         for tok in _re.findall(r"[a-zA-Z]{4,}", name):
             vocab.add(tok)
     # Merge domain glossary
-    domain_id = ((header or {}).get("config") or {}).get("domain") or "psych"
+    domain_id = ((header or {}).get("config") or {}).get("domain") or "general"
     ds = DomainStore()
     try:
         vocab.update(ds.glossary_terms(domain_id))
@@ -78,4 +78,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

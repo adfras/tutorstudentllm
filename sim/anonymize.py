@@ -4,16 +4,12 @@ from typing import Dict, List
 
 
 DEFAULT_TERMS = {
-    "memory","working memory","short-term memory","long-term memory","attention","language","reasoning",
-    "learning","conditioning","classical conditioning","operant conditioning","reinforcement","punishment","extinction",
-    "stimulus","response","unconditioned stimulus","conditioned stimulus","unconditioned response","conditioned response",
-    "hypothesis","variable","independent variable","dependent variable","control group","random assignment","validity","reliability",
-    "neuron","dendrite","axon","synapse","neurotransmitter","dopamine","serotonin","acetylcholine","gaba","glutamate",
-    "amygdala","hippocampus","thalamus","hypothalamus","prefrontal cortex","cortex","limbic system","brainstem",
-    "piaget","sensorimotor","preoperational","concrete operational","formal operational","conservation","attachment","strange situation",
-    "attitude","persuasion","cognitive dissonance","conformity","obedience","asch","milgram","prejudice","stereotype",
-    "big five","trait","introversion","extraversion","neuroticism","agreeableness","conscientiousness","openness",
-    "anxiety","phobia","panic","depression","bipolar","schizophrenia","psychosis","cognitive behavioral therapy","cbt",
+    # Domain-agnostic vocabulary to seed anonymization
+    "concept","pattern","prototype","category","feature","example","sample","token","label",
+    "input","output","signal","feedback","reward","penalty","habit","goal","rule","strategy",
+    "evidence","consensus","contrast","similarity","difference","association","correlation","causation",
+    "experiment","hypothesis","variable","independent","dependent","control","random","validity","reliability",
+    "sequence","memory","attention","language","reasoning","learning","generalization","discrimination",
 }
 
 
@@ -27,7 +23,7 @@ def build_vocab(skill_map: dict) -> List[str]:
     except Exception:
         pass
     vocab.update(DEFAULT_TERMS)
-    stop = {"psychology","introductory","understand","analysis","apply","create","evaluate","development","social","personality","abnormal","research","methods"}
+    stop = {"introductory","understand","analysis","apply","create","evaluate","research","methods"}
     return [t for t in vocab if t not in stop]
 
 

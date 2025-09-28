@@ -1,0 +1,15 @@
+skills:
+  general-concepts:
+    templates:
+      - id: gen-con-define
+        description: Ask to identify the best example of a concept using abstract placeholders (no real-world terms).
+      - id: gen-odd-one-out
+        description: Choose the odd one out by a simple structural rule (length, repeated symbol, suffix), using tokens like X1, ZQ-14.
+  pattern-recognition:
+    templates:
+      - id: gen-pattern-find
+        description: Ask to find a matching pattern among options using abstract sequences (e.g., AB→BC→CD).
+      - id: gen-sequence-next
+        description: Choose the next item in an abstract sequence (rotation/shift), tokens only.
+      - id: gen-analogy
+        description: Simple mapping analogy with placeholders (X→Y as A→?).

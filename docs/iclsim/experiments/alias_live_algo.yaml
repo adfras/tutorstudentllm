@@ -1,11 +1,11 @@
 version: 1
 runs:
-  - name: alias_classical_algo_live
+  - name: alias_signal_algo_live
     task: alias_swap
     steps: 10
     student: algo
-    domain: psych
-    alias_family_id: classical-conditioning-01
+    domain: general
+    alias_family_id: signal-association-01
     coverage_tau: 0.4
     dials:
       closed_book: true
@@ -13,12 +13,12 @@ runs:
       accumulate_notes: true
       self_consistency_n: 1
       use_tools: false
-  - name: alias_operant_algo_live
+  - name: alias_feedback_algo_live
     task: alias_swap
     steps: 10
     student: algo
-    domain: psych
-    alias_family_id: operant-conditioning-01
+    domain: general
+    alias_family_id: feedback-learning-01
     coverage_tau: 0.4
     dials:
       closed_book: true

@@ -3,6 +3,7 @@
 
 # Python cache
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.pyo
 
@@ -12,6 +13,12 @@ Thumbs.db
 
 # Local data/logs
 *.out
-*:\Zone.Identifier
+# Windows-origin metadata sidecars copied onto *nix
+*:Zone.Identifier
+
+# Run artifacts
+runs/
+
+# Local data file example
 data/user_stats.json
 

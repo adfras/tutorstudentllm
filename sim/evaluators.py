@@ -8,7 +8,7 @@ def _safe_ast(code: str) -> ast.Module:
     allowed = (
         ast.Module, ast.FunctionDef, ast.arguments, ast.arg, ast.Load, ast.Store,
         ast.Return, ast.BinOp, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod,
-        ast.Pow, ast.USub, ast.UAdd, ast.Num, ast.Constant, ast.Expr, ast.Compare,
+        ast.Pow, ast.USub, ast.UAdd, ast.Constant, ast.Expr, ast.Compare,
         ast.Eq, ast.NotEq, ast.Gt, ast.GtE, ast.Lt, ast.LtE, ast.If, ast.IfExp,
         ast.BoolOp, ast.And, ast.Or, ast.UnaryOp, ast.Name, ast.Assign, ast.AnnAssign,
         ast.Call, ast.Tuple, ast.List, ast.Dict, ast.keyword, ast.Pass,
@@ -71,4 +71,3 @@ def evaluate_table_qa(answer: str, expected: str) -> Dict[str, Any]:
         return (s or "").strip().lower()
     ok = (norm(answer) == norm(expected))
     return {"ok": ok, "expected": expected, "got": answer}
-

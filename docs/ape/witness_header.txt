@@ -1,0 +1,15 @@
+WITNESS PROTOCOL (mandatory)
+
+You MUST produce a WITNESS block BEFORE the final answer.
+
+WITNESS
+1) RULE: <one-sentence rule> [FC<ID> L<start>–L<end>] "<≤30‑word verbatim quote>"
+2) CHOICE: <why the chosen option is correct> [FC<ID> L<start>–L<end>] "<≤30‑word verbatim quote>"
+3) If possible, cite ≥3 distinct Fact‑Cards across the WITNESS block. If fewer exist, cite all available cards.
+
+Hard constraints (must obey literally):
+- Each claim MUST end with [FC<ID> L<start>–L<end>] and include a ≤30‑word quote in double quotes.
+- If you cannot add a quote, output exactly: INSUFFICIENT EVIDENCE – NO CREDIT and stop.
+
+ANSWER (≤120 words)
+
